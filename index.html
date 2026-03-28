@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OHL DPR Dashboard</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg: #f5efe7;
+      --card: #ffffff;
+      --ink: #1d2a2c;
+      --muted: #647273;
+      --line: #ddd6cb;
+      --accent: #c46228;
+      --accent-soft: #f1c9a8;
+      --soft: #fbf7f2;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #faf6ef 0%, #efe5d8 100%);
+    }
+    .page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .hero, .panel, .card, .drawer {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+    .hero, .panel, .card, .drawer { padding: 18px; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 34px; margin-bottom: 10px; }
+    h2 { font-size: 22px; }
+    .small, .status, .hero p {
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .upload {
+      margin-top: 16px;
+      padding: 16px;
+      border: 1px dashed var(--accent);
+      border-radius: 12px;
+      background: #fff8f2;
+    }
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 10px;
+    }
+    input[type="file"], input[type="search"] {
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      font: inherit;
+    }
+    input[type="search"] {
+      min-width: 280px;
+      flex: 1;
+    }
+    button {
+      padding: 10px 14px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font: inherit;
+    }
+    button.secondary {
+      background: #ece4d8;
+      color: var(--ink);
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 10px;
+      min-height: 20px;
+    }
+    .eyebrow {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+    .grid {
+      display: grid;
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .two { grid-template-columns: 1fr 1fr; }
+    .three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .main { grid-template-columns: 1.3fr 0.9fr; align-items: start; }
+    .big {
+      font-size: 30px;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+    .chip-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .chip {
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--soft);
+      font-size: 13px;
+    }
+    .chip button {
+      padding: 0;
+      margin-left: 8px;
+      background: transparent;
+      color: var(--ink);
+      border: 0;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .bars {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .bar-item {
+      display: grid;
+      grid-template-columns: minmax(90px, 1fr) minmax(120px, 2fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+    .bar-item:hover, .clickable:hover {
+      border-color: var(--accent-soft);
+      background: #fffaf5;
+    }
+    .bar-track {
+      height: 10px;
+      border-radius: 999px;
+      background: #efe9df;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-soft));
+    }
+    svg {
+      width: 100%;
+      height: 240px;
+      margin-top: 12px;
+      border-radius: 12px;
+      background: #fff9f5;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 10px 8px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .num {
+      text-align: right;
+      white-space: nowrap;
+    }
+    .scroll { overflow-x: auto; }
+    .drawer {
+      position: sticky;
+      top: 20px;
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .detail-item {
+      padding: 10px;
+      border-radius: 12px;
+      background: #faf4ec;
+      border: 1px solid #ece0d1;
+    }
+    .transcript {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #faf7f2;
+      white-space: pre-wrap;
+      line-height: 1.5;
+      max-height: 360px;
+      overflow: auto;
+    }
+    .hidden { display: none; }
+    .clickable { cursor: pointer; }
+    .tickets-table tbody tr, .agent-table tbody tr, .login-table tbody tr, .activity-summary tbody tr { cursor: pointer; }
+    .tickets-table tbody tr:hover, .agent-table tbody tr:hover, .login-table tbody tr:hover, .activity-summary tbody tr:hover { background: #fcf8f2; }
+    @media (max-width: 1080px) {
+      .cards, .two, .three, .main { grid-template-columns: 1fr; }
+      .drawer { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="eyebrow">DPR Aligned</div>
+      <h1>OHL DPR Dashboard</h1>
+      <p>This dashboard is aligned to the MIS DPR structure: Freshdesk drives chat metrics, AAR feeds <code>Login Logout Raw</code>, and the Intelliassign activity export feeds <code>Active Hours Raw</code>. The visible outputs are grouped to mirror the DPR view more closely.</p>
+      <div class="upload">
+        <div>Upload the raw files that feed the DPR.</div>
+        <div class="row">
+          <input id="freshdeskFile" type="file" accept=".xlsx" />
+          <input id="aarFile" type="file" accept=".xlsx" />
+          <input id="activityFile" type="file" accept=".csv,.xlsx" />
+          <button id="analyzeBtn">Analyze</button>
+          <button id="clearFiltersBtn" class="secondary hidden">Clear Filters</button>
+          <button id="downloadBtn" class="secondary hidden">Download Filtered CSV</button>
+        </div>
+        <div id="status" class="status">Waiting for files.</div>
+      </div>
+    </section>
+
+    <section id="results" class="hidden">
+      <section id="overviewCards" class="grid cards"></section>
+
+      <section class="panel">
+        <div class="eyebrow">Snap Filters</div>
+        <h2>Freshdesk drilldown</h2>
+        <div id="activeFilters" class="chip-row"></div>
+      </section>
+
+      <section class="grid two">
+        <div class="panel">
+          <div class="eyebrow">Snap View</div>
+          <h2>Chats by day</h2>
+          <svg id="dailyChart" viewBox="0 0 760 240" preserveAspectRatio="none"></svg>
+          <div id="dailyChips" class="chip-row"></div>
+        </div>
+        <div class="panel">
+          <div class="eyebrow">DPR Sources</div>
+          <h2>Quick filters</h2>
+          <div id="metricChips" class="chip-row"></div>
+          <div class="eyebrow" style="margin-top:18px;">Loaded sources</div>
+          <div id="sourceList" class="chip-row"></div>
+        </div>
+      </section>
+
+      <section class="grid three">
+        <div class="panel">
+          <div class="eyebrow">Hourly</div>
+          <h2>Chats by hour</h2>
+          <div id="hourBars" class="bars"></div>
+        </div>
+        <div class="panel">
+          <div class="eyebrow">Type-1</div>
+          <h2>Top categories</h2>
+          <div id="typeBars" class="bars"></div>
+        </div>
+        <div class="panel">
+          <div class="eyebrow">Channel Topic</div>
+          <h2>Top topics</h2>
+          <div id="topicBars" class="bars"></div>
+        </div>
+      </section>
+
+      <section class="grid main">
+        <div class="panel">
+          <div class="eyebrow">Freshdesk Raw</div>
+          <h2>Ticket explorer</h2>
+          <div class="row">
+            <input id="searchInput" type="search" placeholder="Search ticket, agent, customer, phone, subject, transcript..." />
+            <div id="ticketCount" class="small"></div>
+          </div>
+          <div class="scroll">
+            <table class="tickets-table">
+              <thead>
+                <tr>
+                  <th>Ticket</th>
+                  <th>Agent</th>
+                  <th>Date</th>
+                  <th>Type-1</th>
+                  <th>Topic</th>
+                  <th class="num">FRT</th>
+                  <th class="num">AHT</th>
+                  <th class="num">UWT</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="ticketsTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <aside class="drawer">
+          <div class="eyebrow">Ticket Detail</div>
+          <h2 id="detailTitle">Select a ticket</h2>
+          <p id="detailSubtitle" class="small">Click a Freshdesk ticket row to inspect the transcript and fields.</p>
+          <div id="detailGrid" class="detail-grid hidden"></div>
+          <div id="detailTranscript" class="transcript hidden"></div>
+        </aside>
+      </section>
+
+      <section class="panel">
+        <div class="eyebrow">Snap View</div>
+        <h2>Freshdesk agent performance</h2>
+        <div class="scroll">
+          <table class="agent-table">
+            <thead>
+              <tr>
+                <th>Agent</th>
+                <th class="num">Chats</th>
+                <th class="num">Avg FRT (sec)</th>
+                <th class="num">FRT Met %</th>
+                <th class="num">Avg AHT (min)</th>
+                <th class="num">Avg UWT (sec)</th>
+                <th class="num">UWT&lt;2 %</th>
+              </tr>
+            </thead>
+            <tbody id="agentTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="grid two">
+        <div class="panel">
+          <div class="eyebrow">Login Logout Raw</div>
+          <h2>First login and last logout</h2>
+          <p id="loginStatus" class="small">AAR file not loaded.</p>
+          <div class="scroll">
+            <table class="login-table">
+              <thead>
+                <tr>
+                  <th>Agent</th>
+                  <th>Date</th>
+                  <th>First Login</th>
+                  <th>Last Logout</th>
+                  <th class="num">Rows</th>
+                </tr>
+              </thead>
+              <tbody id="loginTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="eyebrow">Active Hours Raw</div>
+          <h2>Active hours summary</h2>
+          <p id="activityStatus" class="small">Activity CSV not loaded.</p>
+          <div class="scroll">
+            <table class="activity-summary">
+              <thead>
+                <tr>
+                  <th>Agent</th>
+                  <th>Date</th>
+                  <th class="num">Active Hrs</th>
+                  <th class="num">Active Rows</th>
+                  <th class="num">Inactive Rows</th>
+                </tr>
+              </thead>
+              <tbody id="activitySummaryTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="eyebrow">Active Hours Raw</div>
+        <h2>Activity transitions</h2>
+        <p id="activityAgentInfo" class="small">Click an agent in the active-hours table to inspect every active/inactive transition from the raw export.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Agent</th>
+                <th>Created At</th>
+                <th>Activity Type</th>
+                <th>Agent Status</th>
+                <th class="num">Duration (sec)</th>
+                <th class="num">Duration (min)</th>
+              </tr>
+            </thead>
+            <tbody id="activityEventsTable"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </div>
+  <script>
+    const state = {
+      freshdeskRows: [],
+      filteredRows: [],
+      freshdeskLoaded: false,
+      loginRows: [],
+      loginLoaded: false,
+      activitySummaryRows: [],
+      activityEvents: [],
+      activityLoaded: false,
+      selectedTicketId: "",
+      selectedActivityAgent: "",
+      filters: {},
+      search: ""
+    };
+
+    const freshdeskFile = document.getElementById("freshdeskFile");
+    const aarFile = document.getElementById("aarFile");
+    const activityFile = document.getElementById("activityFile");
+    const analyzeBtn = document.getElementById("analyzeBtn");
+    const clearFiltersBtn = document.getElementById("clearFiltersBtn");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const searchInput = document.getElementById("searchInput");
+    const statusEl = document.getElementById("status");
+    const resultsEl = document.getElementById("results");
+
+    const safe = (value) => String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+
+    const formatNumber = (value, digits = 0) => {
+      if (value === null || value === undefined || Number.isNaN(value)) return "-";
+      return Number(value).toLocaleString(undefined, {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+      });
+    };
+
+    const formatPercent = (value) => value === null || value === undefined || Number.isNaN(value) ? "-" : `${formatNumber(value, 2)}%`;
+    const formatDate = (date) => date ? date.toISOString().slice(0, 10) : "-";
+    const formatDateTime = (date) => date ? `${date.toISOString().slice(0, 10)} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}` : "-";
+
+    const text = (row, keys) => {
+      for (const key of keys) {
+        const value = (row[key] ?? "").toString().trim();
+        if (value) return value;
+      }
+      return "";
+    };
+
+    const normalizeKey = (value) => String(value ?? "")
+      .replace(/^\uFEFF/, "")
+      .trim()
+      .replace(/^"(.*)"$/, "$1")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+
+    const asDate = (value) => {
+      if (value === null || value === undefined || value === "") return null;
+      if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+      if (typeof value === "number") {
+        const utcDays = Math.floor(value - 25569);
+        const utcValue = utcDays * 86400;
+        const dateInfo = new Date(utcValue * 1000);
+        const fractionalDay = value - Math.floor(value) + 0.0000001;
+        let totalSeconds = Math.floor(86400 * fractionalDay);
+        const seconds = totalSeconds % 60;
+        totalSeconds -= seconds;
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor(totalSeconds / 60) % 60;
+        return new Date(dateInfo.getFullYear(), dateInfo.getMonth(), dateInfo.getDate(), hours, minutes, seconds);
+      }
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    };
+
+    const diffSeconds = (start, end) => {
+      if (!start || !end) return null;
+      const seconds = (end.getTime() - start.getTime()) / 1000;
+      return seconds < 0 ? null : seconds;
+    };
+
+    const avg = (items) => items.length ? items.reduce((sum, value) => sum + value, 0) / items.length : null;
+    const percent = (a, b) => b > 0 ? (a / b) * 100 : null;
+
+    function parseWorkbookRows(buffer) {
+      const workbook = XLSX.read(new Uint8Array(buffer), {
+        type: "array",
+        cellDates: true,
+        dense: false,
+        cellStyles: false,
+        cellNF: false,
+        cellHTML: false,
+        cellFormula: false,
+        sheetStubs: false
+      });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      return XLSX.utils.sheet_to_json(firstSheet, {
+        defval: "",
+        raw: true,
+        blankrows: false
+      });
+    }
+
+    function normalizeRows(rows) {
+      return rows.map((row) => {
+        const normalized = {};
+        Object.entries(row || {}).forEach(([key, value]) => {
+          normalized[normalizeKey(key)] = typeof value === "string" ? value.trim() : value;
+        });
+        return normalized;
+      });
+    }
+
+    function parseCsvRows(csvText) {
+      const source = String(csvText ?? "").replace(/^\uFEFF/, "");
+      if (!source.trim()) return [];
+
+      const rows = [];
+      const parsed = [];
+      let current = "";
+      let row = [];
+      let inQuotes = false;
+
+      for (let i = 0; i < source.length; i += 1) {
+        const char = source[i];
+        const next = source[i + 1];
+
+        if (char === '"') {
+          if (inQuotes && next === '"') {
+            current += '"';
+            i += 1;
+          } else {
+            inQuotes = !inQuotes;
+          }
+          continue;
+        }
+
+        if (char === "," && !inQuotes) {
+          row.push(current);
+          current = "";
+          continue;
+        }
+
+        if ((char === "\n" || char === "\r") && !inQuotes) {
+          if (char === "\r" && next === "\n") i += 1;
+          row.push(current);
+          current = "";
+          if (row.some((value) => String(value).trim() !== "")) parsed.push(row);
+          row = [];
+          continue;
+        }
+
+        current += char;
+      }
+
+      if (current.length || row.length) {
+        row.push(current);
+        if (row.some((value) => String(value).trim() !== "")) parsed.push(row);
+      }
+
+      if (!parsed.length) return rows;
+
+      const headers = parsed[0].map((header, index) => normalizeKey(header) || `column_${index + 1}`);
+      for (let i = 1; i < parsed.length; i += 1) {
+        const values = parsed[i];
+        const item = {};
+        headers.forEach((header, index) => {
+          item[header] = (values[index] ?? "").trim();
+        });
+        rows.push(item);
+      }
+
+      return rows;
+    }
+
+    function enrichFreshdeskRows(rows) {
+      const chatRows = rows.filter((row) => {
+        const source = text(row, ["Source"]);
+        const ticketType = text(row, ["Ticket Type", "Type"]);
+        return source === "Chat" || /chat/i.test(ticketType);
+      });
+
+      const finalRows = chatRows.length ? chatRows : rows;
+
+      return finalRows.map((row, index) => {
+        const created = asDate(row["Created time"]);
+        const assigned = asDate(row["Chat First Assigned Time Stamp"]) || asDate(row["First Group Assigned Time Stamp"]);
+        const firstResponse = asDate(row["Chat First Response Time Stamp"]);
+        const initiated = asDate(row["Chat Initiated Time Stamp"]) || asDate(row["Agent Chat Initiated Time"]) || created;
+        const resolved = asDate(row["Chat Resolution Time Stamp"]) || asDate(row["Resolved time"]) || asDate(row["Closed time"]);
+
+        const frtSeconds = diffSeconds(assigned, firstResponse);
+        const ahtSeconds = diffSeconds(firstResponse, resolved);
+        const uwtSeconds = diffSeconds(initiated, firstResponse);
+
+        return {
+          id: `${text(row, ["Ticket ID"]) || index}-${index}`,
+          ticket: text(row, ["Ticket ID"]) || `Row-${index + 1}`,
+          agent: text(row, ["Agent Name", "Agent", "Internal agent"]) || "(Unassigned)",
+          date: formatDate(created),
+          created,
+          customer: text(row, ["Full name", "Subject"]) || "(Blank)",
+          phone: text(row, ["Phone number", "Customer Number"]) || "(Blank)",
+          type1: text(row, ["Type-1"]) || "(Blank)",
+          topic: text(row, ["Channel Topic"]) || "(Blank)",
+          orderSource: text(row, ["Order Source"]) || "(Blank)",
+          client: text(row, ["Client"]) || "(Blank)",
+          resolutionStatus: text(row, ["Resolution status", "Status"]) || "(Blank)",
+          firstResponseStatus: text(row, ["First response status"]) || "(Blank)",
+          description: text(row, ["Description"]),
+          frtSeconds,
+          ahtMinutes: ahtSeconds === null ? null : ahtSeconds / 60,
+          uwtSeconds,
+          frtMet: frtSeconds !== null ? frtSeconds <= 60 : null,
+          uwtMet: uwtSeconds !== null ? uwtSeconds < 120 : null
+        };
+      });
+    }
+
+    function buildLoginRows(rows) {
+      const grouped = new Map();
+      rows.forEach((row) => {
+        const agent = text(row, ["Agent name"]);
+        const start = asDate(row["Start time"]);
+        const end = asDate(row["End time"]);
+        if (!agent || !start || !end) return;
+        if (!grouped.has(agent)) grouped.set(agent, []);
+        grouped.get(agent).push({ start, end });
+      });
+
+      return [...grouped.entries()].map(([agent, items]) => {
+        const sorted = items.sort((a, b) => a.start - b.start);
+        const firstLogin = sorted[0].start;
+        const lastLogout = sorted.length >= 2 ? sorted[sorted.length - 2].end : sorted[sorted.length - 1].end;
+        return {
+          agent,
+          date: formatDate(firstLogin),
+          firstLogin,
+          lastLogout,
+          loginHours: Math.max(0, (lastLogout.getTime() - firstLogin.getTime()) / 3600000),
+          rowCount: sorted.length
+        };
+      }).sort((a, b) => a.agent.localeCompare(b.agent));
+    }
+
+    function buildActivityModel(rows) {
+      const byAgentDate = new Map();
+      const events = [];
+
+      rows.forEach((row) => {
+        const agent = text(row, ["agent_name"]);
+        const created = asDate(row.created_at);
+        const activityType = text(row, ["activity_type"]).toLowerCase() || "(blank)";
+        const agentStatus = text(row, ["agent_status"]) || "(Blank)";
+        const seconds = Number(row.agent_status_in_seconds || 0);
+        if (!agent || !created) return;
+
+        const date = formatDate(created);
+        const key = `${agent}||${date}`;
+        if (!byAgentDate.has(key)) {
+          byAgentDate.set(key, {
+            agent,
+            date,
+            activeSeconds: 0,
+            activeRows: 0,
+            inactiveRows: 0
+          });
+        }
+
+        const item = byAgentDate.get(key);
+        if (activityType === "active") {
+          item.activeSeconds += Number.isFinite(seconds) ? seconds : 0;
+          item.activeRows += 1;
+        } else if (activityType === "inactive") {
+          item.inactiveRows += 1;
+        }
+
+        events.push({
+          agent,
+          created,
+          createdLabel: formatDateTime(created),
+          activityType,
+          agentStatus,
+          durationSeconds: Number.isFinite(seconds) ? seconds : 0,
+          durationMinutes: Number.isFinite(seconds) ? seconds / 60 : 0
+        });
+      });
+
+      return {
+        summaryRows: [...byAgentDate.values()].sort((a, b) => a.agent.localeCompare(b.agent) || a.date.localeCompare(b.date)),
+        events: events.sort((a, b) => a.created - b.created)
+      };
+    }
+
+    function countSeries(rows, field, limit = 0) {
+      const map = new Map();
+      rows.forEach((row) => {
+        const key = row[field] || "(Blank)";
+        map.set(key, (map.get(key) || 0) + 1);
+      });
+      const result = [...map.entries()]
+        .map(([label, value]) => ({ label, value }))
+        .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+      return limit ? result.slice(0, limit) : result;
+    }
+
+    function dailySeries(rows) {
+      return countSeries(rows, "date").sort((a, b) => a.label.localeCompare(b.label));
+    }
+
+    function hourlySeries(rows) {
+      const map = new Map();
+      rows.forEach((row) => {
+        const hour = row.created ? `${String(row.created.getHours()).padStart(2, "0")}:00` : "(Blank)";
+        map.set(hour, (map.get(hour) || 0) + 1);
+      });
+      return Array.from({ length: 24 }, (_, hour) => {
+        const label = `${String(hour).padStart(2, "0")}:00`;
+        return { label, value: map.get(label) || 0 };
+      });
+    }
+
+    function filteredFreshdeskRows() {
+      return state.freshdeskRows.filter((row) => {
+        for (const [key, value] of Object.entries(state.filters)) {
+          if (!value) continue;
+          if (key === "metric") {
+            if (value === "frtMet" && row.frtMet !== true) return false;
+            if (value === "frtMiss" && row.frtMet !== false) return false;
+            if (value === "uwtMet" && row.uwtMet !== true) return false;
+            if (value === "uwtMiss" && row.uwtMet !== false) return false;
+            continue;
+          }
+          if (row[key] !== value) return false;
+        }
+
+        if (state.search) {
+          const haystack = [
+            row.ticket, row.agent, row.customer, row.phone, row.type1, row.topic,
+            row.orderSource, row.client, row.resolutionStatus, row.firstResponseStatus, row.description
+          ].join(" ").toLowerCase();
+          if (!haystack.includes(state.search.toLowerCase())) return false;
+        }
+
+        return true;
+      });
+    }
+
+    function freshdeskSummary(rows) {
+      const frt = rows.map((row) => row.frtSeconds).filter((value) => value !== null);
+      const aht = rows.map((row) => row.ahtMinutes).filter((value) => value !== null);
+      const uwt = rows.map((row) => row.uwtSeconds).filter((value) => value !== null);
+      const frtMet = rows.filter((row) => row.frtMet === true).length;
+      const frtEligible = rows.filter((row) => row.frtMet !== null).length;
+      const uwtMet = rows.filter((row) => row.uwtMet === true).length;
+      const uwtEligible = rows.filter((row) => row.uwtMet !== null).length;
+      const agents = new Set(rows.map((row) => row.agent));
+      return {
+        tickets: rows.length,
+        agents: agents.size,
+        avgFRT: avg(frt),
+        frtMetPct: percent(frtMet, frtEligible),
+        avgAHT: avg(aht),
+        avgUWT: avg(uwt),
+        uwtMetPct: percent(uwtMet, uwtEligible)
+      };
+    }
+
+    function freshdeskAgentRows(rows) {
+      const map = new Map();
+      rows.forEach((row) => {
+        if (!map.has(row.agent)) {
+          map.set(row.agent, []);
+        }
+        map.get(row.agent).push(row);
+      });
+
+      return [...map.entries()].map(([agent, items]) => {
+        const frt = items.map((row) => row.frtSeconds).filter((value) => value !== null);
+        const aht = items.map((row) => row.ahtMinutes).filter((value) => value !== null);
+        const uwt = items.map((row) => row.uwtSeconds).filter((value) => value !== null);
+        const frtMet = items.filter((row) => row.frtMet === true).length;
+        const frtEligible = items.filter((row) => row.frtMet !== null).length;
+        const uwtMet = items.filter((row) => row.uwtMet === true).length;
+        const uwtEligible = items.filter((row) => row.uwtMet !== null).length;
+        return {
+          agent,
+          chats: items.length,
+          avgFRT: avg(frt),
+          frtMetPct: percent(frtMet, frtEligible),
+          avgAHT: avg(aht),
+          avgUWT: avg(uwt),
+          uwtMetPct: percent(uwtMet, uwtEligible)
+        };
+      }).sort((a, b) => b.chats - a.chats || a.agent.localeCompare(b.agent));
+    }
+
+    function renderOverview() {
+      const summary = freshdeskSummary(state.filteredRows);
+      const cards = [
+        { eyebrow: "Snap Tickets", value: formatNumber(summary.tickets), note: "Freshdesk ticket rows in current drilldown" },
+        { eyebrow: "Snap Agents", value: formatNumber(summary.agents), note: "Unique agents in current drilldown" },
+        { eyebrow: "FRT", value: formatPercent(summary.frtMetPct), note: `FRT met percentage | Avg FRT ${formatNumber(summary.avgFRT, 2)} sec` },
+        { eyebrow: "AHT / UWT", value: formatNumber(summary.avgAHT, 2), note: `Avg AHT in minutes | Avg UWT ${formatNumber(summary.avgUWT, 2)} sec` }
+      ];
+      document.getElementById("overviewCards").innerHTML = cards.map((card) => `
+        <div class="card">
+          <div class="eyebrow">${safe(card.eyebrow)}</div>
+          <div class="big">${safe(card.value)}</div>
+          <div class="small">${safe(card.note)}</div>
+        </div>
+      `).join("");
+    }
+
+    function renderActiveFilters() {
+      const container = document.getElementById("activeFilters");
+      const chips = Object.entries(state.filters).map(([key, value]) => `
+        <div class="chip">${safe(key)}: ${safe(value)}<button data-key="${safe(key)}">x</button></div>
+      `);
+      if (state.search) {
+        chips.push(`<div class="chip">search: ${safe(state.search)}<button data-key="__search">x</button></div>`);
+      }
+      container.innerHTML = chips.length ? chips.join("") : `<div class="small">No active Freshdesk filters.</div>`;
+      clearFiltersBtn.classList.toggle("hidden", !(chips.length));
+      downloadBtn.classList.toggle("hidden", !(chips.length));
+
+      container.querySelectorAll("button").forEach((button) => {
+        button.addEventListener("click", () => {
+          if (button.dataset.key === "__search") {
+            state.search = "";
+            searchInput.value = "";
+          } else {
+            delete state.filters[button.dataset.key];
+          }
+          rerender();
+        });
+      });
+    }
+
+    function renderMetricChips() {
+      const chips = [
+        { label: "FRT Met", key: "metric", value: "frtMet" },
+        { label: "FRT Miss", key: "metric", value: "frtMiss" },
+        { label: "UWT<2 Met", key: "metric", value: "uwtMet" },
+        { label: "UWT<2 Miss", key: "metric", value: "uwtMiss" }
+      ];
+      document.getElementById("metricChips").innerHTML = chips.map((chip) => `
+        <div class="chip clickable" data-key="${safe(chip.key)}" data-value="${safe(chip.value)}">${safe(chip.label)}</div>
+      `).join("");
+      document.querySelectorAll("#metricChips .clickable").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          state.filters[chip.dataset.key] = chip.dataset.value;
+          rerender();
+        });
+      });
+    }
+
+    function renderSourceList() {
+      const items = [
+        `Freshdesk source: ${state.freshdeskLoaded ? "Loaded" : "Not loaded"}`,
+        `Login Logout Raw source: ${state.loginLoaded ? "Loaded" : "Not loaded"}`,
+        `Active Hours Raw source: ${state.activityLoaded ? "Loaded" : "Not loaded"}`
+      ];
+      document.getElementById("sourceList").innerHTML = items.map((item) => `<div class="chip">${safe(item)}</div>`).join("");
+    }
+
+    function renderBars(targetId, items, key) {
+      const target = document.getElementById(targetId);
+      const max = Math.max(1, ...items.map((item) => item.value));
+      target.innerHTML = items.map((item) => `
+        <div class="bar-item" data-key="${safe(key)}" data-value="${safe(item.label)}">
+          <div>${safe(item.label)}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(item.value / max) * 100}%"></div></div>
+          <div>${formatNumber(item.value)}</div>
+        </div>
+      `).join("");
+      target.querySelectorAll(".bar-item").forEach((item) => {
+        item.addEventListener("click", () => {
+          state.filters[item.dataset.key] = item.dataset.value;
+          rerender();
+        });
+      });
+    }
+
+    function renderDailyChart(items) {
+      const svg = document.getElementById("dailyChart");
+      const chips = document.getElementById("dailyChips");
+      if (!items.length) {
+        svg.innerHTML = "";
+        chips.innerHTML = "";
+        return;
+      }
+
+      const width = 760;
+      const height = 240;
+      const left = 40;
+      const right = 20;
+      const top = 20;
+      const bottom = 36;
+      const max = Math.max(...items.map((item) => item.value), 1);
+      const stepX = items.length === 1 ? 0 : (width - left - right) / (items.length - 1);
+      const points = items.map((item, index) => ({
+        ...item,
+        x: left + (stepX * index),
+        y: height - bottom - ((item.value / max) * (height - top - bottom))
+      }));
+      const path = points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+      const area = `${path} L ${points[points.length - 1].x} ${height - bottom} L ${points[0].x} ${height - bottom} Z`;
+      svg.innerHTML = `
+        <defs><linearGradient id="fillLine" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(196,98,40,0.28)"></stop><stop offset="100%" stop-color="rgba(196,98,40,0.02)"></stop></linearGradient></defs>
+        ${[0, 0.25, 0.5, 0.75, 1].map((fraction) => {
+          const y = height - bottom - fraction * (height - top - bottom);
+          return `<line x1="${left}" y1="${y}" x2="${width - right}" y2="${y}" stroke="#e6ddd2" stroke-dasharray="4 4"></line>`;
+        }).join("")}
+        <path d="${area}" fill="url(#fillLine)"></path>
+        <path d="${path}" fill="none" stroke="#c46228" stroke-width="3"></path>
+        ${points.map((point) => `<circle cx="${point.x}" cy="${point.y}" r="4" fill="#c46228"></circle>`).join("")}
+      `;
+      chips.innerHTML = items.map((item) => `<div class="chip clickable" data-date="${safe(item.label)}">${safe(item.label)} (${formatNumber(item.value)})</div>`).join("");
+      chips.querySelectorAll(".clickable").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          state.filters.date = chip.dataset.date;
+          rerender();
+        });
+      });
+    }
+
+    function renderTickets() {
+      const rows = state.filteredRows.slice(0, 250);
+      document.getElementById("ticketCount").textContent = `${formatNumber(state.filteredRows.length)} tickets${state.filteredRows.length > 250 ? ", showing first 250" : ""}`;
+      document.getElementById("ticketsTable").innerHTML = rows.map((row) => `
+        <tr data-id="${safe(row.id)}">
+          <td>${safe(row.ticket)}</td>
+          <td>${safe(row.agent)}</td>
+          <td>${safe(row.date)}</td>
+          <td>${safe(row.type1)}</td>
+          <td>${safe(row.topic)}</td>
+          <td class="num">${formatNumber(row.frtSeconds, 2)}</td>
+          <td class="num">${formatNumber(row.ahtMinutes, 2)}</td>
+          <td class="num">${formatNumber(row.uwtSeconds, 2)}</td>
+          <td>${safe(row.resolutionStatus)}</td>
+        </tr>
+      `).join("");
+
+      document.querySelectorAll("#ticketsTable tr").forEach((row) => {
+        row.addEventListener("click", () => {
+          state.selectedTicketId = row.dataset.id;
+          renderTicketDetail();
+        });
+      });
+    }
+
+    function renderTicketDetail() {
+      const row = state.filteredRows.find((item) => item.id === state.selectedTicketId) || state.filteredRows[0];
+      const title = document.getElementById("detailTitle");
+      const subtitle = document.getElementById("detailSubtitle");
+      const grid = document.getElementById("detailGrid");
+      const transcript = document.getElementById("detailTranscript");
+
+      if (!row) {
+        title.textContent = "Select a ticket";
+        subtitle.textContent = "Load Freshdesk data to inspect ticket details.";
+        grid.classList.add("hidden");
+        transcript.classList.add("hidden");
+        return;
+      }
+
+      state.selectedTicketId = row.id;
+      title.textContent = `Ticket ${row.ticket}`;
+      subtitle.textContent = `${row.agent} | ${row.customer} | ${row.date}`;
+
+      const items = [
+        ["Agent", row.agent],
+        ["Customer", row.customer],
+        ["Phone", row.phone],
+        ["Created", formatDateTime(row.created)],
+        ["Type-1", row.type1],
+        ["Channel Topic", row.topic],
+        ["Order Source", row.orderSource],
+        ["Client", row.client],
+        ["Resolution", row.resolutionStatus],
+        ["First Response Status", row.firstResponseStatus],
+        ["FRT (sec)", formatNumber(row.frtSeconds, 2)],
+        ["AHT (min)", formatNumber(row.ahtMinutes, 2)],
+        ["UWT (sec)", formatNumber(row.uwtSeconds, 2)]
+      ];
+
+      grid.innerHTML = items.map(([label, value]) => `
+        <div class="detail-item">
+          <div class="eyebrow">${safe(label)}</div>
+          <div>${safe(value)}</div>
+        </div>
+      `).join("");
+      grid.classList.remove("hidden");
+      transcript.textContent = row.description || "No transcript available.";
+      transcript.classList.remove("hidden");
+    }
+
+    function renderAgentTable() {
+      const rows = freshdeskAgentRows(state.filteredRows);
+      document.getElementById("agentTable").innerHTML = rows.map((row) => `
+        <tr data-agent="${safe(row.agent)}">
+          <td>${safe(row.agent)}</td>
+          <td class="num">${formatNumber(row.chats)}</td>
+          <td class="num">${formatNumber(row.avgFRT, 2)}</td>
+          <td class="num">${formatPercent(row.frtMetPct)}</td>
+          <td class="num">${formatNumber(row.avgAHT, 2)}</td>
+          <td class="num">${formatNumber(row.avgUWT, 2)}</td>
+          <td class="num">${formatPercent(row.uwtMetPct)}</td>
+        </tr>
+      `).join("");
+
+      document.querySelectorAll("#agentTable tr").forEach((row) => {
+        row.addEventListener("click", () => {
+          state.filters.agent = row.dataset.agent;
+          rerender();
+        });
+      });
+    }
+
+    function renderLoginSection() {
+      const status = document.getElementById("loginStatus");
+      const table = document.getElementById("loginTable");
+      if (!state.loginLoaded) {
+        status.textContent = "AAR file not loaded.";
+        table.innerHTML = "";
+        return;
+      }
+      status.textContent = "AAR loaded. This section represents the Login Logout Raw lineage used for First Login and Last Logout in Snap.";
+      table.innerHTML = state.loginRows.map((row) => `
+        <tr>
+          <td>${safe(row.agent)}</td>
+          <td>${safe(row.date)}</td>
+          <td>${safe(formatDateTime(row.firstLogin))}</td>
+          <td>${safe(formatDateTime(row.lastLogout))}</td>
+          <td class="num">${formatNumber(row.rowCount, 0)}</td>
+        </tr>
+      `).join("");
+    }
+
+    function renderActivitySection() {
+      const status = document.getElementById("activityStatus");
+      const summary = document.getElementById("activitySummaryTable");
+      if (!state.activityLoaded) {
+        status.textContent = "Active Hours Raw source not loaded.";
+        summary.innerHTML = "";
+        document.getElementById("activityAgentInfo").textContent = "Click an agent in the active-hours table to inspect every active/inactive transition from the raw export.";
+        document.getElementById("activityEventsTable").innerHTML = "";
+        return;
+      }
+
+      if (!state.activitySummaryRows.length) {
+        status.textContent = "Activity CSV loaded, but no active-hours rows were parsed from the file.";
+        summary.innerHTML = "";
+        document.getElementById("activityAgentInfo").textContent = "No activity rows available to drill into.";
+        document.getElementById("activityEventsTable").innerHTML = "";
+        return;
+      }
+
+      status.textContent = `Activity CSV loaded. ${formatNumber(state.activitySummaryRows.length)} agent-date rows parsed from Active Hours Raw source.`;
+      summary.innerHTML = state.activitySummaryRows.map((row) => `
+        <tr data-agent="${safe(row.agent)}">
+          <td>${safe(row.agent)}</td>
+          <td>${safe(row.date)}</td>
+          <td class="num">${formatNumber(row.activeSeconds / 3600, 2)}</td>
+          <td class="num">${formatNumber(row.activeRows, 0)}</td>
+          <td class="num">${formatNumber(row.inactiveRows, 0)}</td>
+        </tr>
+      `).join("");
+
+      document.querySelectorAll("#activitySummaryTable tr").forEach((row) => {
+        row.addEventListener("click", () => {
+          state.selectedActivityAgent = row.dataset.agent;
+          renderActivityEvents();
+        });
+      });
+
+      renderActivityEvents();
+    }
+
+    function renderActivityEvents() {
+      const info = document.getElementById("activityAgentInfo");
+      const table = document.getElementById("activityEventsTable");
+      if (!state.activityLoaded) {
+        info.textContent = "Activity CSV not loaded.";
+        table.innerHTML = "";
+        return;
+      }
+      if (!state.selectedActivityAgent) {
+        info.textContent = "Click an agent in the active-hours table to inspect every active/inactive transition from the raw export.";
+        table.innerHTML = "";
+        return;
+      }
+      const events = state.activityEvents.filter((row) => row.agent === state.selectedActivityAgent);
+      info.textContent = `${state.selectedActivityAgent}: ${formatNumber(events.length)} raw activity rows.`;
+      table.innerHTML = events.map((row) => `
+        <tr>
+          <td>${safe(row.agent)}</td>
+          <td>${safe(row.createdLabel)}</td>
+          <td>${safe(row.activityType)}</td>
+          <td>${safe(row.agentStatus)}</td>
+          <td class="num">${formatNumber(row.durationSeconds, 0)}</td>
+          <td class="num">${formatNumber(row.durationMinutes, 2)}</td>
+        </tr>
+      `).join("");
+    }
+
+    function renderFreshdeskSections() {
+      const rows = state.filteredRows;
+      const daily = dailySeries(rows);
+      renderOverview();
+      renderActiveFilters();
+      renderMetricChips();
+      renderSourceList();
+      renderDailyChart(daily);
+      renderBars("hourBars", hourlySeries(rows), "hour");
+      renderBars("typeBars", countSeries(rows, "type1", 10), "type1");
+      renderBars("topicBars", countSeries(rows, "topic", 10), "topic");
+      renderTickets();
+      renderTicketDetail();
+      renderAgentTable();
+    }
+
+    function rerender() {
+      state.filteredRows = filteredFreshdeskRows();
+      renderFreshdeskSections();
+      renderLoginSection();
+      renderActivitySection();
+      resultsEl.classList.remove("hidden");
+    }
+
+    function clearFreshdeskFilters() {
+      state.filters = {};
+      state.search = "";
+      searchInput.value = "";
+      rerender();
+    }
+
+    function downloadFilteredCsv() {
+      if (!state.filteredRows.length) return;
+      const headers = ["Ticket ID", "Agent", "Date", "Customer", "Phone", "Type-1", "Topic", "Order Source", "Client", "Resolution Status", "First Response Status", "FRT Seconds", "AHT Minutes", "UWT Seconds", "Description"];
+      const csv = [
+        headers.join(","),
+        ...state.filteredRows.map((row) => [
+          row.ticket, row.agent, row.date, row.customer, row.phone, row.type1, row.topic,
+          row.orderSource, row.client, row.resolutionStatus, row.firstResponseStatus,
+          row.frtSeconds ?? "", row.ahtMinutes ?? "", row.uwtSeconds ?? "", row.description
+        ].map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(","))
+      ].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "freshdesk_filtered_tickets.csv";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    async function analyze() {
+      if (!freshdeskFile.files[0]) {
+        statusEl.textContent = "Freshdesk file is required.";
+        return;
+      }
+
+      if (!window.XLSX) {
+        statusEl.textContent = "SheetJS failed to load. Refresh the page with internet access.";
+        return;
+      }
+
+      analyzeBtn.disabled = true;
+      statusEl.textContent = "Reading DPR raw files...";
+
+      try {
+        state.filters = {};
+        state.search = "";
+        searchInput.value = "";
+        state.selectedTicketId = "";
+        state.selectedActivityAgent = "";
+
+        const freshdeskRows = parseWorkbookRows(await freshdeskFile.files[0].arrayBuffer());
+        state.freshdeskRows = enrichFreshdeskRows(freshdeskRows);
+        state.freshdeskLoaded = true;
+
+        if (aarFile.files[0]) {
+          const aarRows = parseWorkbookRows(await aarFile.files[0].arrayBuffer());
+          state.loginRows = buildLoginRows(aarRows);
+          state.loginLoaded = true;
+        } else {
+          state.loginRows = [];
+          state.loginLoaded = false;
+        }
+
+        if (activityFile.files[0]) {
+          const activityUpload = activityFile.files[0];
+          const isWorkbook = /\.xlsx$/i.test(activityUpload.name);
+          const activityRows = isWorkbook
+            ? normalizeRows(parseWorkbookRows(await activityUpload.arrayBuffer()))
+            : parseCsvRows(await activityUpload.text());
+          const activityModel = buildActivityModel(activityRows);
+          state.activitySummaryRows = activityModel.summaryRows;
+          state.activityEvents = activityModel.events;
+          state.activityLoaded = true;
+        } else {
+          state.activitySummaryRows = [];
+          state.activityEvents = [];
+          state.activityLoaded = false;
+        }
+
+        rerender();
+        statusEl.textContent = `Loaded ${freshdeskFile.files[0].name}${aarFile.files[0] ? ` + ${aarFile.files[0].name}` : ""}${activityFile.files[0] ? ` + ${activityFile.files[0].name}` : ""}.`;
+      } catch (error) {
+        const message = error && error.message ? error.message : "Something went wrong while reading the files.";
+        if (/Array buffer allocation failed/i.test(message)) {
+          statusEl.textContent = "The browser ran out of memory while reading one of the files. Close other tabs, reload this page, and try loading one file at a time starting with Freshdesk.";
+        } else {
+          statusEl.textContent = message;
+        }
+      } finally {
+        analyzeBtn.disabled = false;
+      }
+    }
+
+    analyzeBtn.addEventListener("click", analyze);
+    clearFiltersBtn.addEventListener("click", clearFreshdeskFilters);
+    downloadBtn.addEventListener("click", downloadFilteredCsv);
+    searchInput.addEventListener("input", () => {
+      state.search = searchInput.value.trim();
+      rerender();
+    });
+
+    [freshdeskFile, aarFile, activityFile].forEach((input) => {
+      input.addEventListener("change", () => {
+        const names = [freshdeskFile.files[0]?.name, aarFile.files[0]?.name, activityFile.files[0]?.name].filter(Boolean);
+        statusEl.textContent = names.length ? `${names.join(" + ")} selected. Click Analyze.` : "Waiting for files.";
+      });
+    });
+  </script>
+</body>
+</html>
